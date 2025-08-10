@@ -1,0 +1,532 @@
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"crypto/md5"
+	"encoding/json"
+	"fmt"
+	"log"
+	"math"
+	"net/http"
+	"os"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/ledongthuc/pdf"
+)
+
+// Strutture dati
+type Document struct {
+	ID      string    `json:"id"`
+	Content string    `json:"content"`
+	Page    int       `json:"page"`
+	Vector  []float64 `json:"vector"`
+}
+
+type VectorStore struct {
+	Documents []Document `json:"documents"`
+	ModelName string     `json:"model_name"`
+}
+
+type OllamaRequest struct {
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
+	Stream bool   `json:"stream"`
+}
+
+type OllamaResponse struct {
+	Response string `json:"response"`
+	Done     bool   `json:"done"`
+}
+
+type EmbeddingRequest struct {
+	Model string `json:"model"`
+	Input string `json:"input"`
+}
+
+type EmbeddingResponse struct {
+	Embeddings [][]float64 `json:"embeddings"`
+}
+
+type RAGChatbot struct {
+	vectorStore   *VectorStore
+	ollamaBaseURL string
+	embedModel    string
+	chatModel     string
+	dbPath        string
+}
+
+// Inizializza il chatbot
+func NewRAGChatbot() *RAGChatbot {
+	return &RAGChatbot{
+		vectorStore:   &VectorStore{Documents: []Document{}},
+		ollamaBaseURL: "http://localhost:11434",
+		embedModel:    "nomic-embed-text", // Modello di embedding
+		chatModel:     "llama3.1:8b",      // Modello di chat
+		dbPath:        "vectorstore.json",
+	}
+}
+
+// Estrae testo dal PDF
+func (r *RAGChatbot) ExtractTextFromPDF(filename string) ([]string, error) {
+	file, reader, err := pdf.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("errore apertura PDF: %v", err)
+	}
+	defer file.Close()
+
+	var pages []string
+	totalPages := reader.NumPage()
+
+	fmt.Printf("Elaborazione PDF: %d pagine trovate\n", totalPages)
+
+	for pageNum := 1; pageNum <= totalPages; pageNum++ {
+		page := reader.Page(pageNum)
+		if page.V.IsNull() {
+			continue
+		}
+
+		content, err := page.GetPlainText(nil)
+		if err != nil {
+			log.Printf("Errore estrazione pagina %d: %v", pageNum, err)
+			continue
+		}
+
+		// Pulisci il testo
+		cleanContent := r.cleanText(content)
+		if len(cleanContent) > 50 { // Solo se ha contenuto significativo
+			pages = append(pages, cleanContent)
+		}
+	}
+
+	return pages, nil
+}
+
+// Pulisce il testo estratto
+func (r *RAGChatbot) cleanText(text string) string {
+	// Rimuovi caratteri di controllo e normalizza spazi
+	reg := regexp.MustCompile(`\s+`)
+	text = reg.ReplaceAllString(text, " ")
+
+	// Rimuovi caratteri non stampabili
+	reg = regexp.MustCompile(`[^\p{L}\p{N}\p{P}\p{Z}]+`)
+	text = reg.ReplaceAllString(text, " ")
+
+	return strings.TrimSpace(text)
+}
+
+// Suddivide il testo in chunks
+func (r *RAGChatbot) ChunkText(text string, chunkSize int, overlap int) []string {
+	words := strings.Fields(text)
+	if len(words) <= chunkSize {
+		return []string{text}
+	}
+
+	var chunks []string
+	for i := 0; i < len(words); i += chunkSize - overlap {
+		end := i + chunkSize
+		if end > len(words) {
+			end = len(words)
+		}
+		chunk := strings.Join(words[i:end], " ")
+		chunks = append(chunks, chunk)
+
+		if end == len(words) {
+			break
+		}
+	}
+
+	return chunks
+}
+
+// Genera embedding tramite Ollama
+func (r *RAGChatbot) GetEmbedding(text string) ([]float64, error) {
+	reqBody := EmbeddingRequest{
+		Model: r.embedModel,
+		Input: text,
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(r.ollamaBaseURL+"/api/embed", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("errore chiamata Ollama embed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var embedResp EmbeddingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&embedResp); err != nil {
+		return nil, err
+	}
+
+	if len(embedResp.Embeddings) == 0 {
+		return nil, fmt.Errorf("nessun embedding ricevuto")
+	}
+
+	return embedResp.Embeddings[0], nil
+}
+
+// Calcola similarità coseno
+func cosineSimilarity(a, b []float64) float64 {
+	if len(a) != len(b) {
+		return 0
+	}
+
+	var dotProduct, normA, normB float64
+	for i := range a {
+		dotProduct += a[i] * b[i]
+		normA += a[i] * a[i]
+		normB += b[i] * b[i]
+	}
+
+	normA = math.Sqrt(normA)
+	normB = math.Sqrt(normB)
+
+	if normA == 0 || normB == 0 {
+		return 0
+	}
+
+	return dotProduct / (normA * normB)
+}
+
+// Elabora PDF e crea vector store
+func (r *RAGChatbot) ProcessPDF(filename string) error {
+	fmt.Println("📄 Estrazione testo dal PDF...")
+	pages, err := r.ExtractTextFromPDF(filename)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("✅ Estratte %d pagine\n", len(pages))
+
+	r.vectorStore.Documents = []Document{}
+
+	fmt.Println("🔤 Creazione chunks e embedding...")
+	totalChunks := 0
+
+	for pageNum, pageText := range pages {
+		// Crea chunks per ogni pagina
+		chunks := r.ChunkText(pageText, 300, 50) // 300 parole per chunk, overlap 50
+
+		for chunkIdx, chunk := range chunks {
+			if len(strings.TrimSpace(chunk)) < 20 {
+				continue
+			}
+
+			// Genera ID unico
+			hasher := md5.New()
+			hasher.Write([]byte(chunk))
+			docID := fmt.Sprintf("page_%d_chunk_%d_%x", pageNum+1, chunkIdx, hasher.Sum(nil)[:4])
+
+			fmt.Printf("🔄 Processando chunk %d/%d (pagina %d)\r", totalChunks+1, len(chunks), pageNum+1)
+
+			// Genera embedding
+			vector, err := r.GetEmbedding(chunk)
+			if err != nil {
+				log.Printf("Errore embedding per chunk %s: %v", docID, err)
+				continue
+			}
+
+			doc := Document{
+				ID:      docID,
+				Content: chunk,
+				Page:    pageNum + 1,
+				Vector:  vector,
+			}
+
+			r.vectorStore.Documents = append(r.vectorStore.Documents, doc)
+			totalChunks++
+
+			// Pausa per non sovraccaricare Ollama
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	r.vectorStore.ModelName = r.embedModel
+	fmt.Printf("\n✅ Creati %d chunks con embedding\n", totalChunks)
+
+	return r.SaveVectorStore()
+}
+
+// Salva vector store su file
+func (r *RAGChatbot) SaveVectorStore() error {
+	data, err := json.MarshalIndent(r.vectorStore, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(r.dbPath, data, 0644)
+}
+
+// Carica vector store da file
+func (r *RAGChatbot) LoadVectorStore() error {
+	if _, err := os.Stat(r.dbPath); os.IsNotExist(err) {
+		return fmt.Errorf("database non esistente")
+	}
+
+	data, err := os.ReadFile(r.dbPath)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, r.vectorStore)
+}
+
+// Ricerca documenti simili
+func (r *RAGChatbot) SearchSimilar(query string, topK int) ([]Document, error) {
+	queryVector, err := r.GetEmbedding(query)
+	if err != nil {
+		return nil, err
+	}
+
+	type ScoredDocument struct {
+		Document Document
+		Score    float64
+	}
+
+	var scoredDocs []ScoredDocument
+
+	for _, doc := range r.vectorStore.Documents {
+		similarity := cosineSimilarity(queryVector, doc.Vector)
+		scoredDocs = append(scoredDocs, ScoredDocument{
+			Document: doc,
+			Score:    similarity,
+		})
+	}
+
+	// Ordina per similarità decrescente
+	sort.Slice(scoredDocs, func(i, j int) bool {
+		return scoredDocs[i].Score > scoredDocs[j].Score
+	})
+
+	// Prendi i top K
+	if topK > len(scoredDocs) {
+		topK = len(scoredDocs)
+	}
+
+	var results []Document
+	for i := 0; i < topK; i++ {
+		results = append(results, scoredDocs[i].Document)
+	}
+
+	return results, nil
+}
+
+// Genera risposta tramite Ollama
+func (r *RAGChatbot) GenerateResponse(question string, context []Document) (string, error) {
+	// Costruisci il contesto
+	var contextText strings.Builder
+	contextText.WriteString("Contesto dal documento:\n\n")
+
+	for i, doc := range context {
+		contextText.WriteString(fmt.Sprintf("Sezione %d (Pagina %d):\n%s\n\n", i+1, doc.Page, doc.Content))
+	}
+
+	// Prompt ottimizzato per l'italiano
+	prompt := fmt.Sprintf(`Sei un assistente che risponde a domande basandoti esclusivamente sul documento fornito.
+
+%s
+
+Domanda: %s
+
+Istruzioni:
+- Rispondi SOLO in italiano
+- Usa ESCLUSIVAMENTE le informazioni del contesto fornito
+- Se la risposta non è presente nel documento, dillo chiaramente
+- Sii preciso e dettagliato
+- Cita la pagina quando possibile
+
+Risposta:`, contextText.String(), question)
+
+	reqBody := OllamaRequest{
+		Model:  r.chatModel,
+		Prompt: prompt,
+		Stream: false,
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Post(r.ollamaBaseURL+"/api/generate", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("errore chiamata Ollama: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var response OllamaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", err
+	}
+
+	return response.Response, nil
+}
+
+// Chat con il documento
+func (r *RAGChatbot) Chat(question string) (string, []Document, error) {
+	if len(r.vectorStore.Documents) == 0 {
+		return "Per favore, carica prima un documento PDF.", nil, nil
+	}
+
+	// Cerca documenti simili
+	similarDocs, err := r.SearchSimilar(question, 4)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Genera risposta
+	answer, err := r.GenerateResponse(question, similarDocs)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return answer, similarDocs, nil
+}
+
+// Verifica se Ollama è disponibile
+func (r *RAGChatbot) CheckOllamaAvailable() error {
+	resp, err := http.Get(r.ollamaBaseURL + "/api/tags")
+	if err != nil {
+		return fmt.Errorf("Ollama non disponibile su %s: %v", r.ollamaBaseURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Ollama risponde con status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func main() {
+	chatbot := NewRAGChatbot()
+
+	fmt.Println("🤖 Chatbot RAG Offline per PDF Italiani")
+	fmt.Println("=====================================")
+
+	// Verifica Ollama
+	fmt.Println("🔍 Verifica disponibilità Ollama...")
+	if err := chatbot.CheckOllamaAvailable(); err != nil {
+		log.Fatal("❌ ", err)
+	}
+	fmt.Println("✅ Ollama disponibile")
+
+	// Prova a caricare database esistente
+	fmt.Println("📂 Caricamento database esistente...")
+	if err := chatbot.LoadVectorStore(); err != nil {
+		fmt.Println("⚠️  Nessun database esistente trovato")
+	} else {
+		fmt.Printf("✅ Database caricato: %d documenti\n", len(chatbot.vectorStore.Documents))
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Println("\n📋 Opzioni disponibili:")
+		fmt.Println("1. Elabora nuovo PDF")
+		fmt.Println("2. Fai una domanda")
+		fmt.Println("3. Mostra statistiche database")
+		fmt.Println("4. Esci")
+		fmt.Print("\nScegli un'opzione (1-4): ")
+
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		switch choice {
+		case "1":
+			fmt.Print("\n📄 Inserisci il percorso del file PDF: ")
+			pdfPath, _ := reader.ReadString('\n')
+			pdfPath = strings.TrimSpace(pdfPath)
+
+			if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
+				fmt.Println("❌ File non trovato")
+				continue
+			}
+
+			fmt.Println("\n🚀 Inizio elaborazione PDF...")
+			start := time.Now()
+
+			if err := chatbot.ProcessPDF(pdfPath); err != nil {
+				fmt.Printf("❌ Errore: %v\n", err)
+			} else {
+				duration := time.Since(start)
+				fmt.Printf("✅ PDF elaborato con successo in %v\n", duration)
+				fmt.Printf("📊 Documenti nel database: %d\n", len(chatbot.vectorStore.Documents))
+			}
+
+		case "2":
+			if len(chatbot.vectorStore.Documents) == 0 {
+				fmt.Println("⚠️  Carica prima un PDF!")
+				continue
+			}
+
+			fmt.Print("\n❓ Inserisci la tua domanda: ")
+			question, _ := reader.ReadString('\n')
+			question = strings.TrimSpace(question)
+
+			if question == "" {
+				continue
+			}
+
+			fmt.Println("\n🤔 Sto pensando...")
+			start := time.Now()
+
+			answer, sources, err := chatbot.Chat(question)
+			if err != nil {
+				fmt.Printf("❌ Errore: %v\n", err)
+				continue
+			}
+
+			duration := time.Since(start)
+			fmt.Printf("\n💬 Risposta (generata in %v):\n", duration)
+			fmt.Printf("─────────────────────────────────\n")
+			fmt.Println(answer)
+
+			if len(sources) > 0 {
+				fmt.Println("\n📚 Fonti utilizzate:")
+				for i, source := range sources {
+					fmt.Printf("\n🔹 Fonte %d (Pagina %d):\n", i+1, source.Page)
+					preview := source.Content
+					if len(preview) > 200 {
+						preview = preview[:200] + "..."
+					}
+					fmt.Println(preview)
+				}
+			}
+
+		case "3":
+			fmt.Printf("\n📊 Statistiche Database:\n")
+			fmt.Printf("─────────────────────\n")
+			fmt.Printf("📄 Documenti totali: %d\n", len(chatbot.vectorStore.Documents))
+			fmt.Printf("🔤 Modello embedding: %s\n", chatbot.vectorStore.ModelName)
+
+			if len(chatbot.vectorStore.Documents) > 0 {
+				// Calcola statistiche pagine
+				pageCount := make(map[int]int)
+				totalChars := 0
+				for _, doc := range chatbot.vectorStore.Documents {
+					pageCount[doc.Page]++
+					totalChars += len(doc.Content)
+				}
+
+				fmt.Printf("📖 Pagine elaborate: %d\n", len(pageCount))
+				fmt.Printf("📊 Caratteri totali: %d\n", totalChars)
+				fmt.Printf("📏 Media caratteri per chunk: %.0f\n", float64(totalChars)/float64(len(chatbot.vectorStore.Documents)))
+			}
+
+		case "4":
+			fmt.Println("\n👋 Arrivederci!")
+			return
+
+		default:
+			fmt.Println("❌ Opzione non valida")
+		}
+	}
+}
