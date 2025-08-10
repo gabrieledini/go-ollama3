@@ -37,6 +37,15 @@ type OllamaRequest struct {
 	Stream bool   `json:"stream"`
 }
 
+type OllamaRequest3T struct {
+	Model       string  `json:"model"`
+	Prompt      string  `json:"prompt"`
+	Stream      bool    `json:"stream"`
+	Temperature float64 `json:"temperature,omitempty"`
+	TopK        int     `json:"top_k,omitempty"`
+	TopP        float64 `json:"top_p,omitempty"`
+}
+
 type OllamaResponse struct {
 	Response string `json:"response"`
 	Done     bool   `json:"done"`
@@ -65,7 +74,7 @@ func NewRAGChatbot() *RAGChatbot {
 		vectorStore:   &VectorStore{Documents: []Document{}},
 		ollamaBaseURL: "http://localhost:11434",
 		embedModel:    "nomic-embed-text", // Modello di embedding
-		chatModel:     "llama3.1:8b",      // Modello di chat
+		chatModel:     "",                 // Modello di chat
 		dbPath:        "vectorstore.json",
 	}
 }
@@ -344,10 +353,20 @@ Istruzioni:
 
 Risposta:`, contextText.String(), question)
 
-	reqBody := OllamaRequest{
+	// default
+	/*reqBody := OllamaRequest{
 		Model:  r.chatModel,
 		Prompt: prompt,
 		Stream: false,
+	}*/
+
+	reqBody := OllamaRequest3T{
+		Model:       r.chatModel,
+		Prompt:      prompt,
+		Stream:      false,
+		Temperature: 0.2, // Bassa temperatura per risposte più precise e consistenti
+		TopK:        40,  // Limita le opzioni di token
+		TopP:        0.9, // Nucleus sampling
 	}
 
 	jsonData, err := json.Marshal(reqBody)
@@ -494,9 +513,9 @@ func main() {
 				for i, source := range sources {
 					fmt.Printf("\n🔹 Fonte %d (Pagina %d):\n", i+1, source.Page)
 					preview := source.Content
-					if len(preview) > 200 {
+					/*if len(preview) > 200 {
 						preview = preview[:200] + "..."
-					}
+					}*/
 					fmt.Println(preview)
 				}
 			}
