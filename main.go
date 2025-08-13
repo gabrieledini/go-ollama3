@@ -464,6 +464,8 @@ func (r *RAGChatbot) ProcessTXT(filename string) error {
 		hasher := md5.New()
 		hasher.Write([]byte(chunk))
 		docID := fmt.Sprintf("txt_chunk_%d_%x", chunkIdx, hasher.Sum(nil)[:4])
+		// TODO nel caso di problema di encoding per lettere accentate
+		//docID := fmt.Sprintf("txt_%s_chunk_%d_%x", "ISO-8859-1", chunkIdx, hasher.Sum(nil)[:4])
 
 		fmt.Printf("� Processando chunk %d/%d\r", chunkIdx+1, len(chunks))
 
