@@ -424,6 +424,75 @@ func (r *RAGChatbot) CheckOllamaAvailable() error {
 	return nil
 }
 
+// Elabora file TXT e crea vector store
+func (r *RAGChatbot) ProcessTXT(filename string) error {
+	fmt.Println("� Lettura file TXT...")
+
+	// Leggi tutto il contenuto del file
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("errore lettura file TXT: %v", err)
+	}
+
+	text := string(content)
+
+	// Pulisci il testo
+	cleanedText := r.cleanText(text)
+
+	if len(strings.TrimSpace(cleanedText)) < 50 {
+		return fmt.Errorf("file TXT troppo corto o vuoto")
+	}
+
+	fmt.Printf("✅ File letto: %d caratteri\n", len(cleanedText))
+
+	// Reset del vector store
+	r.vectorStore.Documents = []Document{}
+
+	fmt.Println("� Creazione chunks e embedding...")
+
+	// Crea chunks dal testo completo
+	chunks := r.ChunkText(cleanedText, 300, 50) // 300 parole per chunk, overlap 50
+
+	fmt.Printf("� Creati %d chunks\n", len(chunks))
+
+	for chunkIdx, chunk := range chunks {
+		if len(strings.TrimSpace(chunk)) < 20 {
+			continue
+		}
+
+		// Genera ID unico per il chunk
+		hasher := md5.New()
+		hasher.Write([]byte(chunk))
+		docID := fmt.Sprintf("txt_chunk_%d_%x", chunkIdx, hasher.Sum(nil)[:4])
+
+		fmt.Printf("� Processando chunk %d/%d\r", chunkIdx+1, len(chunks))
+
+		// Genera embedding
+		vector, err := r.GetEmbedding(chunk)
+		if err != nil {
+			log.Printf("Errore embedding per chunk %s: %v", docID, err)
+			continue
+		}
+
+		doc := Document{
+			ID:      docID,
+			Content: chunk,
+			Page:    1, // Per file TXT usiamo sempre pagina 1
+			Vector:  vector,
+		}
+
+		r.vectorStore.Documents = append(r.vectorStore.Documents, doc)
+
+		// Pausa per non sovraccaricare Ollama
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	r.vectorStore.ModelName = r.embedModel
+	fmt.Printf("\n✅ Creati %d chunks con embedding\n", len(r.vectorStore.Documents))
+
+	return r.SaveVectorStore()
+}
+
 func main() {
 	chatbot := NewRAGChatbot()
 
@@ -472,6 +541,7 @@ func main() {
 			fmt.Println("\n🚀 Inizio elaborazione PDF...")
 			start := time.Now()
 
+			// TODO estrazione da txt: chatbot.ProcessTXT(pdfPath)
 			if err := chatbot.ProcessPDF(pdfPath); err != nil {
 				fmt.Printf("❌ Errore: %v\n", err)
 			} else {
