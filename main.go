@@ -73,8 +73,8 @@ func NewRAGChatbot() *RAGChatbot {
 	return &RAGChatbot{
 		vectorStore:   &VectorStore{Documents: []Document{}},
 		ollamaBaseURL: "http://localhost:11434",
-		embedModel:    "nomic-embed-text", // Modello di embedding
-		chatModel:     "",                 // Modello di chat
+		embedModel:    "mistral", //"nomic-embed-text", // Modello di embedding
+		chatModel:     "",        // Modello di chat
 		dbPath:        "vectorstore.json",
 	}
 }
@@ -221,7 +221,9 @@ func (r *RAGChatbot) ProcessPDF(filename string) error {
 
 	for pageNum, pageText := range pages {
 		// Crea chunks per ogni pagina
-		chunks := r.ChunkText(pageText, 300, 50) // 300 parole per chunk, overlap 50
+		chunks := r.ChunkText(pageText, 100, 20)
+		// 300 token , 50 overlap
+		// 100 token, 20 overlap
 
 		for chunkIdx, chunk := range chunks {
 			if len(strings.TrimSpace(chunk)) < 20 {
@@ -361,12 +363,15 @@ Risposta:`, contextText.String(), question)
 	}*/
 
 	reqBody := OllamaRequest3T{
-		Model:       r.chatModel,
-		Prompt:      prompt,
-		Stream:      false,
-		Temperature: 0.2, // Bassa temperatura per risposte più precise e consistenti
-		TopK:        40,  // Limita le opzioni di token
-		TopP:        0.9, // Nucleus sampling
+		Model:  r.chatModel,
+		Prompt: prompt,
+		Stream: false,
+		//		Temperature: 0.2, // Bassa temperatura per risposte più precise e consistenti
+		//		TopK:        40,  // Limita le opzioni di token
+		//		TopP:        0.9, // Nucleus sampling
+		Temperature: 0.4,  // Aumentata per più creatività nella riformulazione
+		TopK:        60,   // Più opzioni per linguaggio naturale
+		TopP:        0.95, // Maggiore varietà lessicale
 	}
 
 	jsonData, err := json.Marshal(reqBody)
@@ -407,6 +412,100 @@ func (r *RAGChatbot) Chat(question string) (string, []Document, error) {
 	}
 
 	return answer, similarDocs, nil
+}
+
+// Versione alternativa con riscrittura esplicita
+func (r *RAGChatbot) GenerateNaturalResponse(question string, context []Document) (string, error) {
+	// Prima estrai le informazioni chiave
+	var contextText strings.Builder
+	contextText.WriteString("Informazioni dal documento:\n")
+
+	for i, doc := range context {
+		contextText.WriteString(fmt.Sprintf("- Fonte %d: %s\n", i+1, doc.Content))
+	}
+
+	// Prompt in due fasi per evitare copia letterale
+	analysisPrompt := fmt.Sprintf(`Analizza le seguenti informazioni e identifica i punti chiave per rispondere alla domanda.
+
+INFORMAZIONI:
+%s
+
+DOMANDA: %s
+
+Elenca i punti chiave e i concetti principali senza copiare frasi intere:`, contextText.String(), question)
+
+	// Prima fase: analisi
+	analysisBody := OllamaRequest3T{
+		Model:       r.chatModel,
+		Prompt:      analysisPrompt,
+		Stream:      false,
+		Temperature: 0.3,
+		TopK:        40,
+		TopP:        0.9,
+	}
+
+	jsonData, err := json.Marshal(analysisBody)
+	if err != nil {
+		return "", err
+	}
+
+	log.Printf("Invio questo prompt: %d", analysisPrompt)
+	resp, err := http.Post(r.ollamaBaseURL+"/api/generate", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var analysisResp OllamaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&analysisResp); err != nil {
+		return "", err
+	}
+
+	// Seconda fase: riscrittura naturale
+	rewritePrompt := fmt.Sprintf(`Basandoti sui seguenti punti chiave, scrivi una risposta naturale e fluida in italiano.
+
+PUNTI CHIAVE IDENTIFICATI:
+%s
+
+DOMANDA ORIGINALE: %s
+
+ISTRUZIONI:
+- Scrivi con parole tue, non copiare
+- Usa un linguaggio naturale e conversazionale
+- Organizza le informazioni in modo logico
+- Aggiungi transizioni fluide tra i concetti
+- Se utile, usa esempi o analogie
+- Mantieni un tono professionale ma accessibile
+
+Risposta naturale:`, analysisResp.Response, question)
+
+	rewriteBody := OllamaRequest3T{
+		Model:       r.chatModel,
+		Prompt:      rewritePrompt,
+		Stream:      false,
+		Temperature: 0.6, // Più alta per maggiore naturalezza
+		TopK:        80,
+		TopP:        0.95,
+	}
+
+	jsonData, err = json.Marshal(rewriteBody)
+	if err != nil {
+		return "", err
+	}
+
+	log.Printf("Invio prompt riscritto: %d", rewritePrompt)
+	resp, err = http.Post(r.ollamaBaseURL+"/api/generate", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var finalResp OllamaResponse
+	if err := json.NewDecoder(resp.Body).Decode(&finalResp); err != nil {
+		return "", err
+	}
+
+	return finalResp.Response, nil
 }
 
 // Verifica se Ollama è disponibile
@@ -498,7 +597,7 @@ func (r *RAGChatbot) ProcessTXT(filename string) error {
 func main() {
 	chatbot := NewRAGChatbot()
 
-	fmt.Println("🤖 Chatbot RAG Offline per PDF Italiani")
+	fmt.Println("🤖 Chatbot RAG Offline per manuali Italiani")
 	fmt.Println("=====================================")
 
 	// Verifica Ollama
@@ -520,7 +619,7 @@ func main() {
 
 	for {
 		fmt.Println("\n📋 Opzioni disponibili:")
-		fmt.Println("1. Elabora nuovo PDF")
+		fmt.Println("1. Elabora nuovo manuale")
 		fmt.Println("2. Fai una domanda")
 		fmt.Println("3. Mostra statistiche database")
 		fmt.Println("4. Esci")
@@ -531,7 +630,7 @@ func main() {
 
 		switch choice {
 		case "1":
-			fmt.Print("\n📄 Inserisci il percorso del file PDF: ")
+			fmt.Print("\n📄 Inserisci il percorso del manuale: ")
 			pdfPath, _ := reader.ReadString('\n')
 			pdfPath = strings.TrimSpace(pdfPath)
 
@@ -540,21 +639,21 @@ func main() {
 				continue
 			}
 
-			fmt.Println("\n🚀 Inizio elaborazione PDF...")
+			fmt.Println("\n🚀 Inizio elaborazione manuale...")
 			start := time.Now()
 
-			// TODO estrazione da txt: chatbot.ProcessTXT(pdfPath)
-			if err := chatbot.ProcessPDF(pdfPath); err != nil {
+			if err := chatbot.ProcessTXT(pdfPath); err != nil {
+				//if err := chatbot.ProcessPDF(pdfPath); err != nil {
 				fmt.Printf("❌ Errore: %v\n", err)
 			} else {
 				duration := time.Since(start)
-				fmt.Printf("✅ PDF elaborato con successo in %v\n", duration)
+				fmt.Printf("✅ Manuale elaborato con successo in %v\n", duration)
 				fmt.Printf("📊 Documenti nel database: %d\n", len(chatbot.vectorStore.Documents))
 			}
 
 		case "2":
 			if len(chatbot.vectorStore.Documents) == 0 {
-				fmt.Println("⚠️  Carica prima un PDF!")
+				fmt.Println("⚠️  Carica prima un manuale!")
 				continue
 			}
 
@@ -569,11 +668,20 @@ func main() {
 			fmt.Println("\n🤔 Sto pensando...")
 			start := time.Now()
 
-			answer, sources, err := chatbot.Chat(question)
+			// versione più fluida
+			sources, err := chatbot.SearchSimilar(question, 2)
+			if err != nil {
+				fmt.Printf("❌ Errore ricerca: %v\n", err)
+				continue
+			}
+			answer, err := chatbot.GenerateNaturalResponse(question, sources)
+
+			// versione più aderente al manuale
+			/*answer, sources, err := chatbot.Chat(question)
 			if err != nil {
 				fmt.Printf("❌ Errore: %v\n", err)
 				continue
-			}
+			}*/
 
 			duration := time.Since(start)
 			fmt.Printf("\n💬 Risposta (generata in %v):\n", duration)

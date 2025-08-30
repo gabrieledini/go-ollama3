@@ -1,0 +1,435 @@
+Scopo di questo documento è quello di fornire il manuale d’uso dell’applicativo “Attestati
+Digitali” per la gestione e validazione degli attestati digitali.
+
+2. Introduzione
+La sezione Formazione - Attestati digitali è la prima del Portale della Formazione di
+Regione Toscana che, attraverso un’interfaccia semplice e intuitiva, consente la gestione e
+la validazione degli attestati digitali relativi ai corsi seguiti dai cittadini, le cui fonti sono GG
+e FSE.
+L’accesso al Portale della Formazione è previsto con autenticazione tramite credenziali
+forti SPID, CIE o CNS.
+
+3. Accesso al Portale della Formazione
+L’utente si collega al servizio Formazione - Attestati Digitali:
+https://servizi.toscana.it/formazione/portale/
+La pagina che visualizza è la seguente:
+Se non viene effettuato il login all’area personale l’utente potrà unicamente visualizzare le
+sezioni: Repertori, Catalogo, TRIO.
+Cliccando sulla voce l’utente accede a una pagina di login dove può scegliere
+tramite quali delle seguenti credenziali accedere al servizio:
+- SPID;
+- CIE;
+- CNS.
+Una volta selezionata l’opzione, l’utente accede ad una pagina di login.
+Nel caso si sia scelto SPID l’utente deve prima selezionare il proprio provider e poi
+procedere al login.
+Di seguito descriviamo le operazioni che possono essere svolte dai profili previsti nel
+sistema:
+- Verificatore: utente che può verificare gli attestati prima che questi passino alla
+fase di validazione. L’operazione di Verifica è presente solo per alcune tipologie di
+attestato e solo per determinati Settori Regionali;
+- Validatore: utente che può validare gli attestati;
+- Consultatore: utente che può ricercare gli attestati emessi.
+Il profilo Validatore può essere dato a:
+- operatori regionali: le abilitazioni al sistema devono essere eseguite dal dirigente di
+riferimento tramite RTAbilitazioni;
+- operatori delle agenzie formative/legale rappresentante.
+
+4. Utente “Verificatore”
+Per alcuni Settori Regionali e specifiche tipologie di attestati la procedura di verifica
+è in carico all’Utente “Verificatore”. La validazione sarà quindi possibile solo dopo
+la verifica preventiva.
+Il Verificatore è abilitato alla verifica degli attestati. Può generare copie e ricercare gli
+attestati.
+Una volta effettuato l’accesso, l’utente Verificatore ha la possibilità di poter procedere,
+attraverso un’interfaccia intuitiva, alle funzioni alle quali è abilitato ovvero:
+- alla verifica o rifiuto dell’attestato (nel caso in cui siano presenti degli errori);
+- accettazione o rifiuto di una richiesta di annullamento da parte del discente;
+- generazione delle copie di un attestato;
+- ricercare gli attestati.
+Nel modulo “Sistema degli attestati digitali” sono presenti tutte le informazioni relative agli
+attestati che vengono raggruppati per corso, del quale si specifica il codice progetto, il
+codice matricola, la denominazione dell’organismo formativo.
+In ogni momento, grazie alle voci presenti nella testata, è possibile visualizzare la home
+page, gli attestati da verificare, quelli approvati e quelli per cui è stato richiesto
+l’annullamento da parte dei discenti. Nel caso in cui siano presenti attestati da verificare o
+richieste di annullamento, le rispettive voci sono segnalate con icone a forma di
+campanella rossa.
+Il Verificatore può effettuare la ricerca di uno specifico attestato utilizzando i filtri che si
+trovano nella parte superiore di ogni pagina oppure attraverso la pagina di ricerca dalla
+quale si può accedere dall’apposita voce nella testata ( ).
+
+4.1 Visualizzazione dell’elenco degli attestati digitali
+Dalla pagina Home, dove sono presenti il numero di attestati digitali da verificare, si
+accede all’elenco degli attestati cliccando sul pulsante .
+L’utente Verificatore accede alla lista degli attestati da gestire.
+Scelto il corso del quale si vogliono gestire gli attestati, tramite il pulsante si accede
+all’elenco dei discenti.
+Di essi sono riportati: cognome, nome, codice fiscale e stato dell’attestato.
+Cliccando sul pulsante si visualizzano i dettagli dell’attestato digitale quali il tipo di
+attestato, il discente e la denominazione del corso.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+
+4.2 Verifica
+La verifica cliccando sul pulsante ed entrando nel dettaglio.
+Cliccando sul pulsante sarà possibile visualizzare l’anteprima dell’attestato e
+controllarne i dati.
+Dopo aver visualizzato e aver verificato la correttezza dei dati, si può procedere
+all'approvazione dello stesso cliccando sui pulsanti “Approva” o “Rifiuta”.
+Una volta confermata l’operazione di validazione cliccando sul pulsante , il
+Verificatore viene informato dell’avvenuta validazione tramite una notifica popup.
+L’attestato viene quindi inviato all’Utente Validatore per la validazione finale.
+
+4.2.1 Richiesta di annullamento da parte di un cittadino
+Attraverso il pulsante si accede alla pagina del Portale nella quale si
+visualizza l’elenco delle richieste di annullamento degli attestati fatte dai discenti.
+Ogni richiesta di annullamento deve essere corredata da opportuna documentazione che
+giustifichi tale richiesta.
+Cliccando sul pulsante si accede al dettaglio dell’attestato e, in questo caso, è visibile
+anche il numero di protocollo dato al momento della validazione.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante scaricare una copia PDF dell’attestato per la stampa;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+- tramite il pulsante procedere all’accettazione della richiesta di annullamento
+dell’attestato;
+- tramite il pulsante procedere al rifiuto della richiesta di annullamento
+dell’attestato.
+
+4.2.2 Accettazione della richiesta di annullamento
+Se il Verificatore ritiene che, data la documentazione presentata, può essere accolta la
+richiesta di annullamento, cliccando sul pulsante si procede all’accoglimento della
+richiesta e l’attestato viene inviato al Sistema che lo ha generato per essere corretto ed
+emesso nuovamente.
+Dalla fonte verrà generato un nuovo attestato che il Verificatore dovrà controllare e,
+successivamente, approvare o rifiutare.
+Alla verifica del secondo attestato, il Verificatore avrà la possibilità di accedere ai dettagli
+di entrambi.
+Da queste schermate si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato.
+Dell’attestato annullato rimarrà traccia nel Sistema dal momento che era stato protocollato
+in precedenza. I protocolli degli attestati, quello annullato e quello nuovo, sono differenti.
+
+4.2.3 Rifiuto della richiesta di annullamento
+Nel caso in cui il Verificatore ritenga che l’attestato emesso sia corretto e, quindi, non
+possa essere accolta la richiesta di annullamento del discente, essa viene rifiutata
+cliccando su . Una volta rifiutata la richiesta di annullamento, l’attestato tornerà in
+possesso del Cittadino.
+
+4.3 Ricerca
+Il Verificatore può effettuare ricerche specifiche in due modi.
+1) Attraverso la pagina Ricerca richiamata nella testata
+Cliccando su si viene rimandati alla seguente schermata, dalla quale impostare i
+filtri per la ricerca in base alle informazioni in possesso del Verificatore.
+2) Attraverso i filtri che si trovano nella parte alta di ogni pagina
+I filtri da impostare variano in base alla Pagina del Portale Formazione in cui si trova il
+Verificatore (esempio: nella pagina che contiene la lista dei discenti di un corso di
+formazione, si troveranno i filtri nome, cognome, codice fiscale utili a cercare direttamente
+la persona interessata).
+Dalla funzione di ricerca sarà anche possibile caricare il documento relativo al pagamento
+del bollo in modalità cartacea, cliccando sull’icona .
+
+5. Utente “Validatore” Operatore RT
+Il Validatore (Operatore RT) è abilitato alla verifica e alla validazione degli attestati. Può
+generare copie e ricercare gli attestati.
+Per alcuni Settori Regionali e specifiche tipologie di attestati la procedura di verifica
+è in carico all’Utente “Verificatore”. La validazione sarà quindi possibile solo dopo
+la verifica preventiva.
+Una volta effettuato l’accesso, l’utente Validatore ha la possibilità di poter procedere,
+attraverso un’interfaccia intuitiva, alle funzioni alle quali è abilitato ovvero:
+- alla validazione o rifiuto dell’attestato (nel caso in cui siano presenti degli errori);
+- accettazione o rifiuto di una richiesta di annullamento da parte del discente;
+- generazione delle copie di un attestato;
+- ricercare gli attestati.
+Nel modulo “Sistema degli attestati digitali” sono presenti tutte le informazioni relative agli
+attestati che vengono raggruppati per corso, del quale si specifica il codice progetto, il
+codice matricola, la denominazione dell’organismo formativo.
+In ogni momento, grazie alle voci presenti nella testata, è possibile visualizzare la home
+page, gli attestati da verificare, quelli approvati e quelli per cui è stato richiesto
+l’annullamento da parte dei discenti. Nel caso in cui siano presenti attestati da verificare o
+richieste di annullamento, le rispettive voci sono segnalate con icone a forma di
+campanella rossa.
+Il Validatore può effettuare la ricerca di uno specifico attestato utilizzando i filtri che si
+trovano nella parte superiore di ogni pagina oppure attraverso la pagina di ricerca dalla
+quale si può accedere dall’apposita voce nella testata ( ).
+
+5.1 Visualizzazione dell’elenco degli attestati digitali
+Dalla pagina Home, dove sono presenti il numero di attestati digitali da validare e le
+statistiche aggiornate agli ultimi 60 giorni, si accede all’elenco degli attestati cliccando sul
+pulsante .
+L’utente Validatore accede alla lista degli attestati da gestire.
+Scelto il corso del quale si vogliono gestire gli attestati, tramite il pulsante si accede
+all’elenco dei discenti.
+Di essi sono riportati: cognome, nome, codice fiscale, stato dell’attestato e se soggetto a
+verifica preventiva.
+Cliccando sul pulsante si visualizzano i dettagli dell’attestato digitale quali il tipo di
+attestato, il discente e la denominazione del corso.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+
+5.2 Validazione
+La validazione può essere fatta in modo massivo, selezionando gli attestati da validare
+dalla lista o su singolo attestato cliccando sul pulsante ed entrando nel dettaglio.
+Cliccando sul pulsante sarà possibile visualizzare l’anteprima dell’attestato e
+controllarne i dati.
+Dopo aver visualizzato e aver verificato la correttezza dei dati, si può procedere alla
+validazione dello stesso cliccando sui pulsanti “Approva” o “Rifiuta”.
+Una volta confermata l’operazione di validazione cliccando sul pulsante , il
+Validatore viene informato dell’avvenuta validazione tramite una notifica popup.
+L’attestato viene quindi inviato al cittadino.
+Nel momento in cui l'attestato viene validato, successivamente alla validazione viene
+effettuata la protocollazione dello stesso tramite il protocollo generale di Regione Toscana
+(ArCoDì).
+
+5.2.1 Richiesta di annullamento da parte di un cittadino
+Attraverso il pulsante si accede alla pagina del Portale nella quale si
+visualizza l’elenco delle richieste di annullamento degli attestati fatte dai discenti.
+Ogni richiesta di annullamento deve essere corredata da opportuna documentazione che
+giustifichi tale richiesta.
+Cliccando sul pulsante si accede al dettaglio dell’attestato e, in questo caso, è visibile
+anche il numero di protocollo dato al momento della validazione.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante scaricare una copia PDF dell’attestato per la stampa;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+- tramite il pulsante procedere all’accettazione della richiesta di annullamento
+dell’attestato;
+- tramite il pulsante procedere al rifiuto della richiesta di annullamento
+dell’attestato.
+
+5.2.2 Accettazione della richiesta di annullamento
+Se il Validatore ritiene che, data la documentazione presentata, può essere accolta la
+richiesta di annullamento, cliccando sul pulsante si procede all’accoglimento della
+richiesta e l’attestato viene inviato al Sistema che lo ha generato per essere corretto ed
+emesso nuovamente.
+Dalla fonte verrà generato un nuovo attestato che il Validatore dovrà controllare e,
+successivamente, validare o rifiutare.
+Alla validazione del secondo attestato, il Validatore avrà la possibilità accedere ai dettagli
+di entrambi.
+Da queste schermate si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato.
+Dell’attestato annullato rimarrà traccia nel Sistema dal momento che era stato protocollato
+in precedenza. I protocolli degli attestati, quello annullato e quello nuovo, sono differenti.
+
+5.2.3 Rifiuto della richiesta di annullamento
+Nel caso in cui il Validatore ritenga che l’attestato emesso sia corretto e, quindi, non possa
+essere accolta la richiesta di annullamento del discente, essa viene rifiutata cliccando su
+. Una volta rifiutata la richiesta di annullamento, l’attestato tornerà in possesso del
+Cittadino.
+
+5.3 Ricerca
+Il Validatore può effettuare ricerche specifiche in due modi.
+3) Attraverso la pagina Ricerca richiamata nella testata
+Cliccando su si viene rimandati alla seguente schermata, dalla quale impostare i
+filtri per la ricerca in base alle informazioni in possesso del Validatore.
+4) Attraverso i filtri che si trovano nella parte alta di ogni pagina
+I filtri da impostare variano in base alla Pagina del Portale Formazione in cui si trova il
+Validatore (esempio: nella pagina che contiene la lista dei discenti di un corso di
+formazione, si troveranno i filtri nome, cognome, codice fiscale utili a cercare direttamente
+la persona interessata).
+Dalla funzione di ricerca sarà anche possibile caricare il documento relativo al pagamento
+del bollo in modalità cartacea, cliccando sull’icona .
+
+6. Utente “Validatore” Operatore Agenzia
+I Validatori delle agenzie formative possono validare solo gli attestati di una certa tipologia
+che si riferiscono a corsi da loro organizzati.
+Una volta effettuato l’accesso, l’utente Validatore ha la possibilità di poter procedere,
+attraverso un’interfaccia intuitiva, alle funzioni alle quali è abilitato ovvero:
+- alla validazione o rifiuto dell’attestato (nel caso in cui siano presenti degli errori);
+- accettazione o rifiuto di una richiesta di annullamento da parte del discente;
+- generazione delle copie di un attestato;
+- ricercare gli attestati.
+Nel modulo “Sistema degli attestati digitali” sono presenti tutte le informazioni relative agli
+attestati che vengono raggruppati per corso, del quale si specifica il codice progetto, il
+codice matricola, la denominazione dell’organismo formativo.
+In ogni momento, grazie alle voci presenti nella testata, è possibile visualizzare la home
+page, gli attestati da verificare, quelli approvati e quelli per cui è stato richiesto
+l’annullamento da parte dei discenti. Nel caso in cui siano presenti attestati da verificare o
+richieste di annullamento, le rispettive voci sono segnalate con icone a forma di
+campanella rossa.
+Il Validatore può effettuare la ricerca di uno specifico attestato utilizzando i filtri che si
+trovano nella parte superiore di ogni pagina oppure attraverso la pagina di ricerca dalla
+quale si può accedere dall’apposita voce nella testata ( ).
+
+6.1 Legale Rappresentante Agenzia Formativa
+Il Legale Rappresentante di un’Agenzia Formativa è colui che è stato censito nel Sistema
+Informativo dell’Accreditamento.
+Il Legale Rappresentante delega le funzioni di Validatore ai membri del personale
+dell’agenzia che rappresenta. Attraverso la Pagina del Portale Formazione, una volta
+effettuato l’accesso con le sue credenziali personali, il Legale Rappresentante potrà
+censire il personale entrando nel menù “Operatori”, affidando il ruolo di Validatore alle
+persone da lui scelte.
+Nel caso in cui il Legale Rappresentante sia responsabile di più Agenzie Formative il
+sistema, come prima cosa, chiede all’utente per quale Agenzia intende operare.
+Una volta selezionata l’Agenzia verranno mostrati a video gli operatori già censiti e data la
+possibilità di inserirne di nuovi.
+Una volta effettuato il salvataggio, gli operatori delegati potranno accedere al Portale
+Formazione con quella qualifica e procedere alla validazione o rifiuto degli attestati dei
+propri discenti.
+Il Legale Rappresentante può inoltre svolgere tutte le funzioni degli operatori delegati.
+
+6.2 Visualizzazione dell’elenco degli attestati digitali
+Dalla pagina Home, dove sono presenti il numero di attestati digitali da validare e le
+statistiche aggiornate agli ultimi 60 giorni, si accede all’elenco degli attestati cliccando sul
+pulsante .
+L’utente Validatore accede alla lista degli attestati da gestire.
+Scelto il corso del quale si vogliono gestire gli attestati, tramite il pulsante si accede
+all’elenco dei discenti.
+Di essi sono riportati: cognome, nome, codice fiscale e stato dell’attestato.
+Cliccando sul pulsante si visualizzano i dettagli dell’attestato digitale quali il tipo di
+attestato, il discente e la denominazione del corso.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+
+6.3 Validazione
+La validazione deve essere fatta cliccando sul pulsante ed entrando nel dettaglio.
+Cliccando sul pulsante sarà possibile visualizzare l’anteprima dell’attestato e
+controllarne i dati.
+Dopo aver visualizzato e aver verificato la correttezza dei dati, si può procedere alla
+validazione dello stesso cliccando sui pulsanti “Approva” o “Rifiuta”.
+Una volta confermata l’operazione di validazione cliccando sul pulsante , il
+Validatore viene informato dell’avvenuta validazione tramite una notifica popup.
+L’attestato viene quindi inviato al cittadino.
+Nel momento in cui l'attestato viene validato, successivamente alla validazione viene
+effettuata la protocollazione dello stesso tramite il protocollo generale di Regione Toscana
+(ArCoDì).
+
+6.3.1 Richiesta di annullamento da parte di un cittadino
+Attraverso il pulsante si accede alla pagina del Portale nella quale si
+visualizza l’elenco delle richieste di annullamento degli attestati fatte dai discenti.
+Ogni richiesta di annullamento deve essere corredata da opportuna documentazione che
+giustifichi tale richiesta.
+Cliccando sul pulsante si accede al dettaglio dell’attestato e, in questo caso, è visibile
+anche il numero di protocollo dato al momento della validazione.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante scaricare una copia PDF dell’attestato per la stampa;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+- tramite il pulsante procedere all’accettazione della richiesta di annullamento
+dell’attestato;
+- tramite il pulsante procedere al rifiuto della richiesta di annullamento
+dell’attestato.
+
+6.3.2 Accettazione della richiesta di annullamento
+Se il Validatore ritiene che, data la documentazione presentata, può essere accolta la
+richiesta di annullamento, cliccando sul pulsante si procede all’accoglimento della
+richiesta e l’attestato viene inviato al Sistema che lo ha generato per essere corretto ed
+emesso nuovamente.
+Dalla fonte verrà generato un nuovo attestato che il Validatore dovrà controllare e,
+successivamente, validare o rifiutare.
+Alla validazione del secondo attestato, il Validatore avrà la possibilità accedere ai dettagli
+di entrambi.
+Da queste schermate si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato.
+Dell’attestato annullato rimarrà traccia nel Sistema dal momento che era stato protocollato
+in precedenza. I protocolli degli attestati, quello annullato e quello nuovo, sono differenti.
+
+6.3.3 Rifiuto della richiesta di annullamento
+Nel caso in cui il Validatore ritenga che l’attestato emesso sia corretto e, quindi, non possa
+essere accolta la richiesta di annullamento del discente, essa viene rifiutata cliccando su
+. Una volta rifiutata la richiesta di annullamento, l’attestato tornerà in possesso del
+Cittadino.
+
+6.4 Ricerca
+Il Validatore può effettuare ricerche specifiche in due modi.
+5) Attraverso la pagina Ricerca richiamata nella testata
+Cliccando su si viene rimandati alla seguente schermata, dalla quale impostare i
+filtri per la ricerca in base alle informazioni in possesso del Validatore.
+6) Attraverso i filtri che si trovano nella parte alta di ogni pagina
+I filtri da impostare variano in base alla Pagina del Portale Formazione in cui si trova il
+Validatore (esempio: nella pagina che contiene la lista dei discenti di un corso di
+formazione, si troveranno i filtri nome, cognome, codice fiscale utili a cercare direttamente
+la persona interessata).
+Dalla funzione di ricerca sarà anche possibile caricare il documento relativo al pagamento
+del bollo in modalità cartacea, cliccando sull’icona .
+
+7. Utente “Cittadino”
+Il Cittadino non è abilitato ad alcun ruolo e dalla Pagina del Portale Formazione può
+visualizzare i propri attestati digitali, richiederne l’annullamento nel caso in cui riscontri
+degli errori e pagare la marca da bollo dove necessario.
+Una volta effettuato l’accesso, il Cittadino ha la possibilità, attraverso un’interfaccia
+intuitiva, di visualizzare una pagina riepilogativa dalla quale accedere al modulo “Sistema
+degli attestati digitali” e nella quale si mostra anche il numero di notifiche di annullamento
+dell’utente. Una volta entrato nella pagina “Sistema degli attestati digitali”, il Cittadino
+riconosce facilmente se ci sono bolli da pagare e di quanti attestati è in possesso grazie
+all’utilizzo di icone e la quantità di entrambi grazie ad un numero in apice. Un richiamo ad
+entrambi, oltre che alla home, è sempre presente nella testata.
+7.1 Bolli da pagare
+Dalla pagina Home, dove sono presenti il numero di attestati digitali di cui il Cittadino è in
+possesso ed il numero di bolli da pagare, si accede all’elenco dei bolli cliccando sul
+pulsante .
+Cliccando su vengono visualizzati i dettagli del corso di cui bisogna pagare il
+bollo, quali il tipo di corso, la denominazione, numero e data di protocollo.
+Da questa schermata si può:
+- tramite il pulsante procedere al pagamento del bollo;
+- tramite il pulsante procedere all’annullamento dell’attestato.
+Cliccando su viene visualizzato un messaggio che ricorda all’Utente quale azione sta
+intraprendendo e di flaggare l’apposita casella per la presa visione.
+Usando il pulsante si viene rimandati al pagamento telematico del bollo
+attraverso PagoPA.
+
+7.1.1 Modalità pagamento bollo cartaceo
+Il pagamento del bollo può avvenire anche in modalità cartacea, acquistando una marca
+da bollo. Dopo tale acquisto il cittadino dovrà compilare un modulo per la dichiarazione di
+assolvimento dell’imposta di bollo. Tale modulo dovrà essere poi consegnato presso gli
+uffici preposti di Regione Toscana o presso l’Agenzia che ha organizzato il corso in modo
+che possa essere caricato sul sistema degli Attestati Digitali.
+L’ufficio preposto di Regione Toscana o l’Agenzia potranno caricare il documento nel
+sistema entrando nel dettaglio dell’attestato e cliccando sull’icona .
+Si aprirà la funzione che permetterà di allegare il documento.
+Una volta caricato il documento il sistema considera conclusa la procedura di pagamento
+del bollo e rende disponibile l’attestato per il download.
+
+7.2 Visualizzazione dell’elenco degli attestati
+Dalla pagina Home, si accede all’elenco degli attestati cliccando sul pulsante .
+Il Cittadino accede alla lista di tutti i certificati in suo possesso.
+Cliccando su si accede alle informazioni sull’attestato quali il tipo di corso, la
+denominazione, numero e data di protocollo.
+Da questa schermata si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante scaricare una copia PDF dell’attestato per la stampa;
+- tramite il pulsante visualizzare in anteprima l’attestato;
+- tramite il pulsante procedere alla richiesta di annullamento dell’attestato.
+L’attestato per la stampa presenta un QR code che serve, quando inquadrato, a
+visualizzare la validazione dell’attestato stesso.
+
+7.3 Richiesta di annullamento di un attestato
+Se l’utente Cittadino, visualizzando il suo attestato digitale, riscontra un errore nello
+stesso, può richiederne un annullamento, cliccando sul pulsante nel dettaglio
+attestato.
+Da qui si accede ad una finestra nella quale viene richiesto di caricare i documenti atti a
+giustificare la richiesta di annullamento dell’attestato.
+Una volta caricato il file, il Cittadino procede all’inoltro della richiesta cliccando su
+. Il cambio di colore del pulsante, in partenza , conferma
+all’Utente il corretto caricamento dei documenti mentre il corretto invio della richiesta viene
+confermato tramite notifica popup.
+La richiesta viene inviata e sarà cura di un Validatore controllare gli estremi per accoglierla
+o rifiutarla.
+Da questo momento, nel dettaglio dell’attestato del Cittadino, verrà visualizzata anche la
+data della richiesta di annullamento.
+
+7.3.1 Accettazione della richiesta di annullamento
+All’accettazione della richiesta di annullamento, l’utente Cittadino potrà visualizzare
+l’attestato ma non ne potrà più usufruire.
+Il Cittadino può visualizzare lo stato della richiesta e, quando pronto, gli sarà possibile
+visualizzare in nuovo attestato corretto.
+Cliccando sul pulsante viene visualizzata una finestra nella
+quale sono contenti i dettagli dell’attestato digitale.
+Da questa finestra si può:
+- tramite il pulsante scaricare l’attestato in PDF;
+- tramite il pulsante visualizzare in anteprima l’attestato.
+
+7.3.2 Rifiuto della richiesta di annullamento
+In caso di rifiuto della richiesta di annullamento, il Cittadino tornerà in possesso del primo
+attestato.
+Dal dettaglio dell’attestato sarà possibile visualizzare lo stato della richiesta di
+annullamento e la motivazione del rifiuto.
+L’Utente potrà decidere, nel caso, di inviare un’altra richiesta di annullamento adducendo
+nuove motivazioni.
