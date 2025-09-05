@@ -37,13 +37,14 @@ type OllamaRequest struct {
 	Stream bool   `json:"stream"`
 }
 
-type OllamaRequest3T struct {
+type OllamaRequestAdvanced struct {
 	Model       string  `json:"model"`
 	Prompt      string  `json:"prompt"`
 	Stream      bool    `json:"stream"`
 	Temperature float64 `json:"temperature,omitempty"`
 	TopK        int     `json:"top_k,omitempty"`
 	TopP        float64 `json:"top_p,omitempty"`
+	NumCtx      int     `json:"num_ctx,omitempty"`
 }
 
 type OllamaResponse struct {
@@ -63,23 +64,34 @@ type EmbeddingResponse struct {
 type RAGChatbot struct {
 	vectorStore   *VectorStore
 	ollamaBaseURL string
-	embedModel    string
-	chatModel     string
+	embedModel    string // Modello leggero per embedding
+	chatModel     string // Modello più ricco per rispondere
 	dbPath        string
 }
 
-// Inizializza il chatbot
+// Inizializza il chatbot con modelli ottimizzati
 func NewRAGChatbot() *RAGChatbot {
 	return &RAGChatbot{
 		vectorStore:   &VectorStore{Documents: []Document{}},
 		ollamaBaseURL: "http://localhost:11434",
-		embedModel:    "nomic-embed-text", // Modello di embedding
-		chatModel:     "",                 // Modello di chat
-		dbPath:        "vectorstore.json",
+		// Modello leggero per embedding - ottimo per documenti tecnici italiani
+		embedModel: "nomic-embed-text", // Alternativa: "mxbai-embed-large"
+		// Modello più ricco per generazione risposte
+		chatModel: "llama3.2", // Alternativa: "mistral", "qwen2.5", "gemma2"
+		dbPath:    "vectorstore.json",
 	}
 }
 
-// Estrae testo dal PDF
+// Configura i modelli
+func (r *RAGChatbot) SetModels(embedModel, chatModel string) {
+	r.embedModel = embedModel
+	r.chatModel = chatModel
+	fmt.Printf("🔧 Modelli configurati:\n")
+	fmt.Printf("   📝 Embedding: %s\n", embedModel)
+	fmt.Printf("   💬 Chat: %s\n", chatModel)
+}
+
+// Estrae testo dal PDF con miglioramenti per manuali tecnici
 func (r *RAGChatbot) ExtractTextFromPDF(filename string) ([]string, error) {
 	file, reader, err := pdf.Open(filename)
 	if err != nil {
@@ -90,7 +102,7 @@ func (r *RAGChatbot) ExtractTextFromPDF(filename string) ([]string, error) {
 	var pages []string
 	totalPages := reader.NumPage()
 
-	fmt.Printf("Elaborazione PDF: %d pagine trovate\n", totalPages)
+	fmt.Printf("📄 Elaborazione PDF: %d pagine trovate\n", totalPages)
 
 	for pageNum := 1; pageNum <= totalPages; pageNum++ {
 		page := reader.Page(pageNum)
@@ -104,9 +116,9 @@ func (r *RAGChatbot) ExtractTextFromPDF(filename string) ([]string, error) {
 			continue
 		}
 
-		// Pulisci il testo
-		cleanContent := r.cleanText(content)
-		if len(cleanContent) > 50 { // Solo se ha contenuto significativo
+		// Pulisci il testo preservando la struttura tecnica
+		cleanContent := r.cleanTechnicalText(content)
+		if len(cleanContent) > 30 { // Soglia più bassa per contenuti tecnici
 			pages = append(pages, cleanContent)
 		}
 	}
@@ -114,27 +126,80 @@ func (r *RAGChatbot) ExtractTextFromPDF(filename string) ([]string, error) {
 	return pages, nil
 }
 
-// Pulisce il testo estratto
-func (r *RAGChatbot) cleanText(text string) string {
-	// Rimuovi caratteri di controllo e normalizza spazi
-	reg := regexp.MustCompile(`\s+`)
+// Pulizia ottimizzata per testi tecnici
+func (r *RAGChatbot) cleanTechnicalText(text string) string {
+	// Preserva numerazioni, codici e riferimenti tecnici
+	text = strings.TrimSpace(text)
+
+	// Normalizza spazi multipli ma preserva struttura
+	reg := regexp.MustCompile(`\s{3,}`)
 	text = reg.ReplaceAllString(text, " ")
 
-	// Rimuovi caratteri non stampabili
-	reg = regexp.MustCompile(`[^\p{L}\p{N}\p{P}\p{Z}]+`)
+	// Preserva caratteri tecnici importanti
+	reg = regexp.MustCompile(`[^\p{L}\p{N}\p{P}\p{Z}\-_./\\()[\]{}]+`)
 	text = reg.ReplaceAllString(text, " ")
+
+	// Rimuovi spazi eccessivi ma preserva struttura di paragrafi
+	reg = regexp.MustCompile(`\n\s*\n\s*\n`)
+	text = reg.ReplaceAllString(text, "\n\n")
 
 	return strings.TrimSpace(text)
 }
 
-// Suddivide il testo in chunks
-func (r *RAGChatbot) ChunkText(text string, chunkSize int, overlap int) []string {
-	words := strings.Fields(text)
-	if len(words) <= chunkSize {
-		return []string{text}
-	}
+// Suddivisione intelligente per documenti tecnici
+func (r *RAGChatbot) ChunkTechnicalText(text string, chunkSize int, overlap int) []string {
+	// Prima dividi per paragrafi naturali
+	paragraphs := strings.Split(text, "\n\n")
 
 	var chunks []string
+	var currentChunk strings.Builder
+	wordCount := 0
+
+	for _, paragraph := range paragraphs {
+		paragraphWords := strings.Fields(paragraph)
+
+		// Se il paragrafo da solo supera la dimensione chunk
+		if len(paragraphWords) > chunkSize {
+			// Salva chunk corrente se non vuoto
+			if wordCount > 0 {
+				chunks = append(chunks, strings.TrimSpace(currentChunk.String()))
+				currentChunk.Reset()
+				wordCount = 0
+			}
+
+			// Dividi il paragrafo lungo
+			subChunks := r.splitLongParagraph(paragraph, chunkSize, overlap)
+			chunks = append(chunks, subChunks...)
+			continue
+		}
+
+		// Se aggiungere questo paragrafo supererebbe la dimensione
+		if wordCount+len(paragraphWords) > chunkSize && wordCount > 0 {
+			chunks = append(chunks, strings.TrimSpace(currentChunk.String()))
+			currentChunk.Reset()
+			wordCount = 0
+		}
+
+		if currentChunk.Len() > 0 {
+			currentChunk.WriteString("\n\n")
+		}
+		currentChunk.WriteString(paragraph)
+		wordCount += len(paragraphWords)
+	}
+
+	// Aggiungi ultimo chunk se non vuoto
+	if wordCount > 0 {
+		chunks = append(chunks, strings.TrimSpace(currentChunk.String()))
+	}
+
+	return chunks
+}
+
+// Suddivide paragrafi lunghi preservando il senso
+func (r *RAGChatbot) splitLongParagraph(text string, chunkSize int, overlap int) []string {
+	words := strings.Fields(text)
+	var chunks []string
+
 	for i := 0; i < len(words); i += chunkSize - overlap {
 		end := i + chunkSize
 		if end > len(words) {
@@ -204,7 +269,7 @@ func cosineSimilarity(a, b []float64) float64 {
 	return dotProduct / (normA * normB)
 }
 
-// Elabora PDF e crea vector store
+// Elabora PDF ottimizzato per manuali tecnici
 func (r *RAGChatbot) ProcessPDF(filename string) error {
 	fmt.Println("📄 Estrazione testo dal PDF...")
 	pages, err := r.ExtractTextFromPDF(filename)
@@ -216,15 +281,15 @@ func (r *RAGChatbot) ProcessPDF(filename string) error {
 
 	r.vectorStore.Documents = []Document{}
 
-	fmt.Println("🔤 Creazione chunks e embedding...")
+	fmt.Println("🔤 Creazione chunks intelligenti e embedding...")
 	totalChunks := 0
 
 	for pageNum, pageText := range pages {
-		// Crea chunks per ogni pagina
-		chunks := r.ChunkText(pageText, 300, 50) // 300 parole per chunk, overlap 50
+		// Chunking intelligente per testi tecnici
+		chunks := r.ChunkTechnicalText(pageText, 400, 75) // Chunks più grandi per contenuto tecnico
 
 		for chunkIdx, chunk := range chunks {
-			if len(strings.TrimSpace(chunk)) < 20 {
+			if len(strings.TrimSpace(chunk)) < 30 {
 				continue
 			}
 
@@ -233,9 +298,9 @@ func (r *RAGChatbot) ProcessPDF(filename string) error {
 			hasher.Write([]byte(chunk))
 			docID := fmt.Sprintf("page_%d_chunk_%d_%x", pageNum+1, chunkIdx, hasher.Sum(nil)[:4])
 
-			fmt.Printf("🔄 Processando chunk %d/%d (pagina %d)\r", totalChunks+1, len(chunks), pageNum+1)
+			fmt.Printf("🔄 Processando chunk %d (pagina %d)\r", totalChunks+1, pageNum+1)
 
-			// Genera embedding
+			// Genera embedding con modello leggero
 			vector, err := r.GetEmbedding(chunk)
 			if err != nil {
 				log.Printf("Errore embedding per chunk %s: %v", docID, err)
@@ -252,13 +317,72 @@ func (r *RAGChatbot) ProcessPDF(filename string) error {
 			r.vectorStore.Documents = append(r.vectorStore.Documents, doc)
 			totalChunks++
 
-			// Pausa per non sovraccaricare Ollama
-			time.Sleep(100 * time.Millisecond)
+			// Pausa ridotta per modello embedding leggero
+			time.Sleep(50 * time.Millisecond)
 		}
 	}
 
 	r.vectorStore.ModelName = r.embedModel
 	fmt.Printf("\n✅ Creati %d chunks con embedding\n", totalChunks)
+
+	return r.SaveVectorStore()
+}
+
+// Elabora file TXT ottimizzato
+func (r *RAGChatbot) ProcessTXT(filename string) error {
+	fmt.Println("📝 Lettura file TXT...")
+
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("errore lettura file TXT: %v", err)
+	}
+
+	text := string(content)
+	cleanedText := r.cleanTechnicalText(text)
+
+	if len(strings.TrimSpace(cleanedText)) < 50 {
+		return fmt.Errorf("file TXT troppo corto o vuoto")
+	}
+
+	fmt.Printf("✅ File letto: %d caratteri\n", len(cleanedText))
+
+	r.vectorStore.Documents = []Document{}
+	fmt.Println("🔤 Creazione chunks intelligenti e embedding...")
+
+	// Chunking intelligente per testi tecnici
+	chunks := r.ChunkTechnicalText(cleanedText, 400, 75)
+	fmt.Printf("📊 Creati %d chunks\n", len(chunks))
+
+	for chunkIdx, chunk := range chunks {
+		if len(strings.TrimSpace(chunk)) < 30 {
+			continue
+		}
+
+		hasher := md5.New()
+		hasher.Write([]byte(chunk))
+		docID := fmt.Sprintf("txt_chunk_%d_%x", chunkIdx, hasher.Sum(nil)[:4])
+
+		fmt.Printf("🔄 Processando chunk %d/%d\r", chunkIdx+1, len(chunks))
+
+		vector, err := r.GetEmbedding(chunk)
+		if err != nil {
+			log.Printf("Errore embedding per chunk %s: %v", docID, err)
+			continue
+		}
+
+		doc := Document{
+			ID:      docID,
+			Content: chunk,
+			Page:    1,
+			Vector:  vector,
+		}
+
+		r.vectorStore.Documents = append(r.vectorStore.Documents, doc)
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	r.vectorStore.ModelName = r.embedModel
+	fmt.Printf("\n✅ Creati %d chunks con embedding\n", len(r.vectorStore.Documents))
 
 	return r.SaveVectorStore()
 }
@@ -269,7 +393,6 @@ func (r *RAGChatbot) SaveVectorStore() error {
 	if err != nil {
 		return err
 	}
-
 	return os.WriteFile(r.dbPath, data, 0644)
 }
 
@@ -287,11 +410,11 @@ func (r *RAGChatbot) LoadVectorStore() error {
 	return json.Unmarshal(data, r.vectorStore)
 }
 
-// Ricerca documenti simili
-func (r *RAGChatbot) SearchSimilar(query string, topK int) ([]Document, error) {
+// Ricerca documenti simili con scoring migliorato
+func (r *RAGChatbot) SearchSimilar(query string, topK int) ([]Document, []float64, error) {
 	queryVector, err := r.GetEmbedding(query)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	type ScoredDocument struct {
@@ -320,53 +443,54 @@ func (r *RAGChatbot) SearchSimilar(query string, topK int) ([]Document, error) {
 	}
 
 	var results []Document
+	var scores []float64
 	for i := 0; i < topK; i++ {
 		results = append(results, scoredDocs[i].Document)
+		scores = append(scores, scoredDocs[i].Score)
 	}
 
-	return results, nil
+	return results, scores, nil
 }
 
-// Genera risposta tramite Ollama
-func (r *RAGChatbot) GenerateResponse(question string, context []Document) (string, error) {
-	// Costruisci il contesto
+// Risposta ottimizzata per riportare il contenuto del manuale
+func (r *RAGChatbot) GenerateManualResponse(question string, context []Document, scores []float64) (string, error) {
+	// Costruisci il contesto con informazioni sui punteggi
 	var contextText strings.Builder
-	contextText.WriteString("Contesto dal documento:\n\n")
+	contextText.WriteString("CONTENUTO DEL MANUALE RELATIVO ALLA DOMANDA:\n\n")
 
 	for i, doc := range context {
-		contextText.WriteString(fmt.Sprintf("Sezione %d (Pagina %d):\n%s\n\n", i+1, doc.Page, doc.Content))
+		contextText.WriteString(fmt.Sprintf("SEZIONE %d (Pagina %d, Rilevanza: %.2f):\n", i+1, doc.Page, scores[i]))
+		contextText.WriteString(doc.Content)
+		contextText.WriteString("\n" + strings.Repeat("-", 50) + "\n\n")
 	}
 
-	// Prompt ottimizzato per l'italiano
-	prompt := fmt.Sprintf(`Sei un assistente che risponde a domande basandoti esclusivamente sul documento fornito.
+	// Prompt ottimizzato per riportare contenuto del manuale
+	prompt := fmt.Sprintf(`Sei un assistente che deve rispondere basandosi ESCLUSIVAMENTE sul contenuto del manuale fornito.
 
+ISTRUZIONI:
+1. Rispondi SOLO utilizzando le informazioni presenti nel contenuto del manuale
+2. Riporta le informazioni del manuale in modo chiaro e organizzato
+3. Se possibile, indica da quale sezione/pagina provengono le informazioni
+4. Se la risposta non è presente nel manuale, dillo esplicitamente
+5. NON aggiungere informazioni esterne al manuale
+6. Mantieni la terminologia tecnica originale del manuale
+
+CONTENUTO DEL MANUALE:
 %s
 
-Domanda: %s
+DOMANDA: %s
 
-Istruzioni:
-- Rispondi SOLO in italiano
-- Usa ESCLUSIVAMENTE le informazioni del contesto fornito
-- Se la risposta non è presente nel documento, dillo chiaramente
-- Sii preciso e dettagliato
-- Cita la pagina quando possibile
+RISPOSTA BASATA SUL MANUALE:`, contextText.String(), question)
 
-Risposta:`, contextText.String(), question)
-
-	// default
-	/*reqBody := OllamaRequest{
-		Model:  r.chatModel,
-		Prompt: prompt,
-		Stream: false,
-	}*/
-
-	reqBody := OllamaRequest3T{
+	// Usa modello più ricco con parametri ottimizzati per fedeltà al testo
+	reqBody := OllamaRequestAdvanced{
 		Model:       r.chatModel,
 		Prompt:      prompt,
 		Stream:      false,
-		Temperature: 0.2, // Bassa temperatura per risposte più precise e consistenti
-		TopK:        40,  // Limita le opzioni di token
-		TopP:        0.9, // Nucleus sampling
+		Temperature: 0.1,  // Molto bassa per aderenza al testo
+		TopK:        20,   // Limitato per coerenza
+		TopP:        0.8,  // Ridotto per precisione
+		NumCtx:      4096, // Contesto ampio per documenti tecnici
 	}
 
 	jsonData, err := json.Marshal(reqBody)
@@ -388,29 +512,29 @@ Risposta:`, contextText.String(), question)
 	return response.Response, nil
 }
 
-// Chat con il documento
-func (r *RAGChatbot) Chat(question string) (string, []Document, error) {
+// Chat ottimizzata per manuali
+func (r *RAGChatbot) Chat(question string) (string, []Document, []float64, error) {
 	if len(r.vectorStore.Documents) == 0 {
-		return "Per favore, carica prima un documento PDF.", nil, nil
+		return "Per favore, carica prima un documento PDF o TXT.", nil, nil, nil
 	}
 
-	// Cerca documenti simili
-	similarDocs, err := r.SearchSimilar(question, 4)
+	// Cerca documenti simili (più risultati per maggiore copertura)
+	similarDocs, scores, err := r.SearchSimilar(question, 5)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
-	// Genera risposta
-	answer, err := r.GenerateResponse(question, similarDocs)
+	// Genera risposta fedele al manuale
+	answer, err := r.GenerateManualResponse(question, similarDocs, scores)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
-	return answer, similarDocs, nil
+	return answer, similarDocs, scores, nil
 }
 
-// Verifica se Ollama è disponibile
-func (r *RAGChatbot) CheckOllamaAvailable() error {
+// Verifica disponibilità modelli
+func (r *RAGChatbot) CheckModelsAvailable() error {
 	resp, err := http.Get(r.ollamaBaseURL + "/api/tags")
 	if err != nil {
 		return fmt.Errorf("Ollama non disponibile su %s: %v", r.ollamaBaseURL, err)
@@ -421,89 +545,48 @@ func (r *RAGChatbot) CheckOllamaAvailable() error {
 		return fmt.Errorf("Ollama risponde con status: %d", resp.StatusCode)
 	}
 
+	// Verifica modelli specifici
+	var tagsResp struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&tagsResp); err != nil {
+		return fmt.Errorf("errore decodifica risposta tags: %v", err)
+	}
+
+	embedFound := false
+	chatFound := false
+
+	for _, model := range tagsResp.Models {
+		if strings.Contains(model.Name, r.embedModel) {
+			embedFound = true
+		}
+		if strings.Contains(model.Name, r.chatModel) {
+			chatFound = true
+		}
+	}
+
+	if !embedFound {
+		fmt.Printf("⚠️  Modello embedding '%s' non trovato. Installalo con: ollama pull %s\n", r.embedModel, r.embedModel)
+	}
+	if !chatFound {
+		fmt.Printf("⚠️  Modello chat '%s' non trovato. Installalo con: ollama pull %s\n", r.chatModel, r.chatModel)
+	}
+
 	return nil
-}
-
-// Elabora file TXT e crea vector store
-func (r *RAGChatbot) ProcessTXT(filename string) error {
-	fmt.Println("� Lettura file TXT...")
-
-	// Leggi tutto il contenuto del file
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf("errore lettura file TXT: %v", err)
-	}
-
-	text := string(content)
-
-	// Pulisci il testo
-	cleanedText := r.cleanText(text)
-
-	if len(strings.TrimSpace(cleanedText)) < 50 {
-		return fmt.Errorf("file TXT troppo corto o vuoto")
-	}
-
-	fmt.Printf("✅ File letto: %d caratteri\n", len(cleanedText))
-
-	// Reset del vector store
-	r.vectorStore.Documents = []Document{}
-
-	fmt.Println("� Creazione chunks e embedding...")
-
-	// Crea chunks dal testo completo
-	chunks := r.ChunkText(cleanedText, 300, 50) // 300 parole per chunk, overlap 50
-
-	fmt.Printf("� Creati %d chunks\n", len(chunks))
-
-	for chunkIdx, chunk := range chunks {
-		if len(strings.TrimSpace(chunk)) < 20 {
-			continue
-		}
-
-		// Genera ID unico per il chunk
-		hasher := md5.New()
-		hasher.Write([]byte(chunk))
-		docID := fmt.Sprintf("txt_chunk_%d_%x", chunkIdx, hasher.Sum(nil)[:4])
-		// TODO nel caso di problema di encoding per lettere accentate
-		//docID := fmt.Sprintf("txt_%s_chunk_%d_%x", "ISO-8859-1", chunkIdx, hasher.Sum(nil)[:4])
-
-		fmt.Printf("� Processando chunk %d/%d\r", chunkIdx+1, len(chunks))
-
-		// Genera embedding
-		vector, err := r.GetEmbedding(chunk)
-		if err != nil {
-			log.Printf("Errore embedding per chunk %s: %v", docID, err)
-			continue
-		}
-
-		doc := Document{
-			ID:      docID,
-			Content: chunk,
-			Page:    1, // Per file TXT usiamo sempre pagina 1
-			Vector:  vector,
-		}
-
-		r.vectorStore.Documents = append(r.vectorStore.Documents, doc)
-
-		// Pausa per non sovraccaricare Ollama
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	r.vectorStore.ModelName = r.embedModel
-	fmt.Printf("\n✅ Creati %d chunks con embedding\n", len(r.vectorStore.Documents))
-
-	return r.SaveVectorStore()
 }
 
 func main() {
 	chatbot := NewRAGChatbot()
 
-	fmt.Println("🤖 Chatbot RAG Offline per PDF Italiani")
-	fmt.Println("=====================================")
+	fmt.Println("🤖 Chatbot RAG per Manuali Tecnici")
+	fmt.Println("===================================")
 
-	// Verifica Ollama
-	fmt.Println("🔍 Verifica disponibilità Ollama...")
-	if err := chatbot.CheckOllamaAvailable(); err != nil {
+	// Verifica Ollama e modelli
+	fmt.Println("🔍 Verifica disponibilità Ollama e modelli...")
+	if err := chatbot.CheckModelsAvailable(); err != nil {
 		log.Fatal("❌ ", err)
 	}
 	fmt.Println("✅ Ollama disponibile")
@@ -513,7 +596,8 @@ func main() {
 	if err := chatbot.LoadVectorStore(); err != nil {
 		fmt.Println("⚠️  Nessun database esistente trovato")
 	} else {
-		fmt.Printf("✅ Database caricato: %d documenti\n", len(chatbot.vectorStore.Documents))
+		fmt.Printf("✅ Database caricato: %d documenti (modello: %s)\n",
+			len(chatbot.vectorStore.Documents), chatbot.vectorStore.ModelName)
 	}
 
 	reader := bufio.NewReader(os.Stdin)
@@ -521,10 +605,12 @@ func main() {
 	for {
 		fmt.Println("\n📋 Opzioni disponibili:")
 		fmt.Println("1. Elabora nuovo PDF")
-		fmt.Println("2. Fai una domanda")
-		fmt.Println("3. Mostra statistiche database")
-		fmt.Println("4. Esci")
-		fmt.Print("\nScegli un'opzione (1-4): ")
+		fmt.Println("2. Elabora nuovo TXT")
+		fmt.Println("3. Configura modelli")
+		fmt.Println("4. Fai una domanda")
+		fmt.Println("5. Mostra statistiche database")
+		fmt.Println("6. Esci")
+		fmt.Print("\nScegli un'opzione (1-6): ")
 
 		choice, _ := reader.ReadString('\n')
 		choice = strings.TrimSpace(choice)
@@ -543,7 +629,6 @@ func main() {
 			fmt.Println("\n🚀 Inizio elaborazione PDF...")
 			start := time.Now()
 
-			// TODO estrazione da txt: chatbot.ProcessTXT(pdfPath)
 			if err := chatbot.ProcessPDF(pdfPath); err != nil {
 				fmt.Printf("❌ Errore: %v\n", err)
 			} else {
@@ -553,8 +638,50 @@ func main() {
 			}
 
 		case "2":
+			fmt.Print("\n📝 Inserisci il percorso del file TXT: ")
+			txtPath, _ := reader.ReadString('\n')
+			txtPath = strings.TrimSpace(txtPath)
+
+			if _, err := os.Stat(txtPath); os.IsNotExist(err) {
+				fmt.Println("❌ File non trovato")
+				continue
+			}
+
+			fmt.Println("\n🚀 Inizio elaborazione TXT...")
+			start := time.Now()
+
+			if err := chatbot.ProcessTXT(txtPath); err != nil {
+				fmt.Printf("❌ Errore: %v\n", err)
+			} else {
+				duration := time.Since(start)
+				fmt.Printf("✅ TXT elaborato con successo in %v\n", duration)
+				fmt.Printf("📊 Documenti nel database: %d\n", len(chatbot.vectorStore.Documents))
+			}
+
+		case "3":
+			fmt.Printf("\n🔧 Configurazione modelli attuali:\n")
+			fmt.Printf("📝 Embedding: %s\n", chatbot.embedModel)
+			fmt.Printf("💬 Chat: %s\n", chatbot.chatModel)
+
+			fmt.Print("\n📝 Nuovo modello embedding (invio per mantenere attuale): ")
+			newEmbed, _ := reader.ReadString('\n')
+			newEmbed = strings.TrimSpace(newEmbed)
+			if newEmbed != "" {
+				chatbot.embedModel = newEmbed
+			}
+
+			fmt.Print("💬 Nuovo modello chat (invio per mantenere attuale): ")
+			newChat, _ := reader.ReadString('\n')
+			newChat = strings.TrimSpace(newChat)
+			if newChat != "" {
+				chatbot.chatModel = newChat
+			}
+
+			chatbot.SetModels(chatbot.embedModel, chatbot.chatModel)
+
+		case "4":
 			if len(chatbot.vectorStore.Documents) == 0 {
-				fmt.Println("⚠️  Carica prima un PDF!")
+				fmt.Println("⚠️  Carica prima un documento!")
 				continue
 			}
 
@@ -566,40 +693,40 @@ func main() {
 				continue
 			}
 
-			fmt.Println("\n🤔 Sto pensando...")
+			fmt.Println("\n🤔 Analizzando il manuale...")
 			start := time.Now()
 
-			answer, sources, err := chatbot.Chat(question)
+			answer, sources, scores, err := chatbot.Chat(question)
 			if err != nil {
 				fmt.Printf("❌ Errore: %v\n", err)
 				continue
 			}
 
 			duration := time.Since(start)
-			fmt.Printf("\n💬 Risposta (generata in %v):\n", duration)
-			fmt.Printf("─────────────────────────────────\n")
+			fmt.Printf("\n💬 Risposta dal manuale (generata in %v):\n", duration)
+			fmt.Printf("═══════════════════════════════════════════════════════\n")
 			fmt.Println(answer)
 
 			if len(sources) > 0 {
-				fmt.Println("\n📚 Fonti utilizzate:")
+				fmt.Println("\n📚 Sezioni del manuale consultate:")
 				for i, source := range sources {
-					fmt.Printf("\n🔹 Fonte %d (Pagina %d):\n", i+1, source.Page)
+					fmt.Printf("\n📍 Sezione %d (Pagina %d, Rilevanza: %.2f):\n", i+1, source.Page, scores[i])
 					preview := source.Content
-					/*if len(preview) > 200 {
+					if len(preview) > 200 {
 						preview = preview[:200] + "..."
-					}*/
-					fmt.Println(preview)
+					}
+					fmt.Printf("   %s\n", preview)
 				}
 			}
 
-		case "3":
+		case "5":
 			fmt.Printf("\n📊 Statistiche Database:\n")
-			fmt.Printf("─────────────────────\n")
+			fmt.Printf("═══════════════════════════\n")
 			fmt.Printf("📄 Documenti totali: %d\n", len(chatbot.vectorStore.Documents))
-			fmt.Printf("🔤 Modello embedding: %s\n", chatbot.vectorStore.ModelName)
+			fmt.Printf("📝 Modello embedding: %s\n", chatbot.vectorStore.ModelName)
+			fmt.Printf("💬 Modello chat: %s\n", chatbot.chatModel)
 
 			if len(chatbot.vectorStore.Documents) > 0 {
-				// Calcola statistiche pagine
 				pageCount := make(map[int]int)
 				totalChars := 0
 				for _, doc := range chatbot.vectorStore.Documents {
@@ -612,7 +739,7 @@ func main() {
 				fmt.Printf("📏 Media caratteri per chunk: %.0f\n", float64(totalChars)/float64(len(chatbot.vectorStore.Documents)))
 			}
 
-		case "4":
+		case "6":
 			fmt.Println("\n👋 Arrivederci!")
 			return
 
