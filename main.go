@@ -77,7 +77,7 @@ func NewRAGChatbot() *RAGChatbot {
 		// Modello leggero per embedding - ottimo per documenti tecnici italiani
 		embedModel: "nomic-embed-text", // Alternativa: "mxbai-embed-large"
 		// Modello più ricco per generazione risposte
-		chatModel: "llama3.2", // Alternativa: "mistral", "qwen2.5", "gemma2"
+		chatModel: "qwen2.5", // Alternativa: "llama3.2:1b" (llama3.2:1b ), "phi3.5" (phi3.5:latest), "qwen2.5" (qwen2.5:3b), "gemma2" (gemma2:2b)
 		dbPath:    "vectorstore.json",
 	}
 }
@@ -512,19 +512,19 @@ RISPOSTA BASATA SUL MANUALE:`, contextText.String(), question)
 	return response.Response, nil
 }
 
-// Chat ottimizzata per manuali
+// Chat ottimizzata per velocità
 func (r *RAGChatbot) Chat(question string) (string, []Document, []float64, error) {
 	if len(r.vectorStore.Documents) == 0 {
 		return "Per favore, carica prima un documento PDF o TXT.", nil, nil, nil
 	}
 
-	// Cerca documenti simili (più risultati per maggiore copertura)
-	similarDocs, scores, err := r.SearchSimilar(question, 5)
+	// Cerca meno documenti per velocità (3 invece di 5)
+	similarDocs, scores, err := r.SearchSimilar(question, 3)
 	if err != nil {
 		return "", nil, nil, err
 	}
 
-	// Genera risposta fedele al manuale
+	// Genera risposta veloce
 	answer, err := r.GenerateManualResponse(question, similarDocs, scores)
 	if err != nil {
 		return "", nil, nil, err
