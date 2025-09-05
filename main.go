@@ -77,7 +77,7 @@ func NewRAGChatbot() *RAGChatbot {
 		// Modello leggero per embedding - ottimo per documenti tecnici italiani
 		embedModel: "nomic-embed-text", // Alternativa: "mxbai-embed-large"
 		// Modello più ricco per generazione risposte
-		chatModel: "qwen2.5", // Alternativa: "llama3.2:1b" (llama3.2:1b ), "phi3.5" (phi3.5:latest), "qwen2.5" (qwen2.5:3b), "gemma2" (gemma2:2b)
+		chatModel: "gemma3n:e2b", // Alternativa: "llama3.2:1b" "phi3.5:latest" "qwen2.5:3b" "gemma2:2b" "gemma3n:e2b" "gemma3:1b"
 		dbPath:    "vectorstore.json",
 	}
 }
